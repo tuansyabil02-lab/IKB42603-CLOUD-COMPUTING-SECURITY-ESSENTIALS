@@ -360,7 +360,11 @@ This confirms both controls are active at the end of the lab: `tenant-b` has an 
 
 **Q1. Why can containers in different namespaces reach each other by default, and why is that dangerous in multi-tenant cloud?**
 
-Kubernetes namespaces are primarily an organizational and RBAC scoping boundary, not a network boundary. Unless a CNI plugin enforces `NetworkPolicy`, the underlying pod network is flat: every pod gets a routable IP and can send traffic to any other pod's IP or service ClusterIP, regardless of which namespace it lives in. This was demonstrated directly in Task 2, where a pod in `tenant-a` reached `tenant-b`'s service and got `HTTP 200` with no policy in place at all. In a real multi-tenant cloud environment this is dangerous because customers assume namespace separation implies network separation — an attacker who compromises one tenant's workload could pivot laterally, scan internal services, and reach another customer's application or data with no additional exploit required, simply because nothing was blocking the traffic in the first place.
+The basic purpose of kubernetes namespaces are primarily for organisation/grouping and to scope things that RBAC (Role-based access control) can see – they are not a network boundary. All pod networks are initially flat unless using a CNI provider which enforces a NetworkPolicy – every single pod has an IP address on this flat pod network that’s addressable from any other IP on the flat pod network or the ClusterIP of any service on that flat pod network, irrespective of which namespace that pod or service belongs in. We explicitly see this is Task 2 - a pod from the tenant-a space has no issue reaching into the tenant-b space to interact with a service and has no problem receiving HTTP 200. 
+
+In a production-grade multitenant cloud space this is a security concern. 
+
+Customers should not be able to expect their pod space is contained/isolated from other tenants just because they reside in different namespaces. If one tenant is comprised the threat could then reach out to another tenant's services without needing another vulnerability to compromise those internal systems.
 
 **Q2. Explain the default-deny principle and how your NetworkPolicy implements it.**
 
