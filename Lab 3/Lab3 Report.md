@@ -6,7 +6,7 @@
 |---|---|
 | **Course Name** | IKB42603 Cloud Computing Security Essentials |
 | **Instructor** | Madam Adani |
-| **Student Name** | Tuan Athir Hakimin bin Tuan Zahirman Zarif |
+| **Student Name** | Tuan Syabil Syahmi Bin tuan Mohd Sazli |
 | **Topic** | Data protection using encryption, TLS, key management, cryptographic erasure and hashing |
 | **Environment** | OpenSSL, Docker, Nginx, AWS CLI and LocalStack KMS |
 | **Date** | 18 August 2026 |
