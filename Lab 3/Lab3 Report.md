@@ -456,31 +456,23 @@ All screenshots used as evidence are stored in the `Evidence` folder.
 
 ### Q1. Compare symmetric and asymmetric encryption: speed, key distribution and typical use.
 
-Symmetric encryption uses the same key for both encryption and decryption, which makes it computationally fast and efficient, especially for large amounts of data. Its main weakness is key distribution — the same secret key must be shared safely between the sender and receiver, and if it is intercepted, the data can be exposed. It is typically used to protect stored data (data at rest) and bulk file encryption, as demonstrated with AES-256 in Task 1.
-
-Asymmetric encryption uses a mathematically linked key pair — a public key and a private key. The public key can be shared openly and used for encryption or signature verification, while the private key is kept secret and used for decryption or signing. This removes the need to share a secret key, but it is significantly slower and more computationally expensive than symmetric encryption. Because of this, it is typically used for key exchange, digital signatures, and authentication rather than for encrypting large volumes of data directly, as shown with RSA in Task 2.
+Symmetric encryption uses one shared key, is fast, but the key is hard to distribute safely used for encrypting bulk data. Asymmetric encryption uses a public/private key pair, is slower, but solves the distribution problem used for signatures, authentication, and key exchange.
 
 ### Q2. Why is key management described as the weakest link, not the algorithm?
 
-Modern encryption algorithms such as AES-256 and RSA-2048 are mathematically very strong and, when implemented correctly, are practically infeasible to break by brute force. However, encrypted data is only as safe as the key that protects it. If a key is weakly generated, stored insecurely, shared carelessly, never rotated, or leaked, an attacker does not need to break the algorithm at all — they can simply use the exposed key to decrypt the data directly. Task 5 and Task 6 illustrated this: the plaintext data key was deliberately deleted from disk after use, and access to Tenant A's data was lost entirely once its master key was scheduled for deletion. This shows that protecting, storing, and controlling access to keys is generally the harder and more critical problem, which is why key management — not the choice of algorithm — is considered the weakest link in a cryptographic system.
+Because modern algorithms are practically unbreakable, but if the key is lost, stolen, or badly stored, the data is exposed anyway no need to break the math. So protecting the key matters more than the algorithm choice.
 
 ### Q3. Explain envelope encryption and why only the master key needs hardware-grade protection.
 
-Envelope encryption is a two-layer encryption scheme. First, a data key is generated and used to encrypt the actual data locally (as done with `record.txt` in Task 5, using `datakey.bin`). Second, that data key itself is encrypted ("wrapped") by a separate master key that is held and managed inside the KMS. The result is that the data is protected by the data key, and the data key is protected by the master key.
-
-Only the master key needs hardware-grade protection (such as being kept inside an HSM or a secure KMS boundary) because the master key never leaves the KMS and is the single point that must remain secure — everything else derives its protection from it. The plaintext data key, by contrast, is only ever needed briefly and in memory to encrypt or decrypt the data, after which it is discarded (as shown when `datakey.bin` and `datakey.b64` were deleted in Task 5). This design allows large volumes of data to be encrypted efficiently with ordinary data keys, while concentrating the strongest security controls on the small number of master keys that matter most.
+Envelope encryption encrypts the data with a data key, then encrypts that data key with a master key. Only the master key needs hardware-grade protection because it never leaves the KMS, while the data key is used briefly and then deleted.
 
 ### Q4. How does cryptographic erasure achieve provable deletion where overwriting cannot (in the cloud)?
 
-In a cloud environment, data is often duplicated across multiple disks, replicas, snapshots, and backups, so it is very difficult to guarantee that every physical copy of a file has been located and securely overwritten. Overwriting therefore cannot reliably prove that all copies of the data have been destroyed.
-
-Cryptographic erasure solves this differently: instead of trying to erase every copy of the ciphertext, it destroys or disables the encryption key that protects the data. As demonstrated in Task 6, once the Tenant A master key was scheduled for deletion, the wrapped data key could no longer be decrypted (`kms decrypt` failed with a `KMSInvalidStateException`), and any remaining copies of `record.env.enc` became permanently unreadable even though the ciphertext files themselves still physically existed. Because there is only one key (or a small number of keys) to destroy, rather than an unknown number of data copies, deletion becomes fast, verifiable, and provable — the provider or auditor only needs to confirm that the key is gone.
+Cloud data has many copies, so overwriting all of them isn't reliable. Cryptographic erasure just destroys the encryption key once it's gone, every copy of the ciphertext becomes permanently unreadable, giving provable deletion without touching the data itself.
 
 ### Q5. How does a hash chain make a log tamper-evident (link to tamper-proof logs, Week 6)?
 
-In a hash chain, each new log entry's hash is calculated from both the current entry's content and the hash of the previous entry, linking every record to the one before it in sequence. This was demonstrated in Task 7, where the entries `login ok`, `file read`, and `export data` were each hashed together with the running `PREV` value from the prior step.
-
-Because each hash depends on the one before it, changing or deleting any single entry in the chain — even far in the past — will produce a completely different hash for that entry, which in turn changes every subsequent hash in the chain. This makes any tampering immediately detectable: an attacker cannot silently modify one log entry without breaking the chain of hashes that follows it, unless they recompute the entire chain from that point forward, which is what makes hash-chained logs "tamper-evident" rather than just tamper-resistant.
+Each entry's hash includes the previous entry's hash, chaining them together. Changing any old entry changes its hash and breaks all hashes after it, so tampering is immediately detectable.
 
 ---
 
